@@ -1,0 +1,71 @@
+CREATE OR ALTER VIEW dbo.vw_ops_route_traffic
+AS
+
+SELECT
+
+/*==========================================================
+    ROUTE
+==========================================================*/
+
+r.route_key,
+
+r.origin_airport,
+
+r.destination_airport,
+
+/*==========================================================
+    DATE
+==========================================================*/
+
+d.year,
+
+d.quarter,
+
+d.month,
+
+d.month_name,
+
+/*==========================================================
+    COMMERCIAL TRAFFIC
+==========================================================*/
+
+SUM(t.departures_scheduled)            AS scheduled_departures,
+
+SUM(t.passengers)                      AS total_passengers,
+
+SUM(t.seats)                           AS total_seats,
+
+SUM(t.freight)                         AS total_freight,
+
+SUM(t.mail)                            AS total_mail,
+
+SUM(t.payload)                         AS total_payload,
+
+SUM(t.distance)                        AS total_distance,
+
+SUM(t.air_time)                        AS total_air_time,
+
+SUM(t.ramp_to_ramp)                    AS total_ramp_time,
+
+COUNT(*)                               AS traffic_records
+
+FROM fact_airline_traffic t
+
+INNER JOIN dim_route r
+    ON t.route_key = r.route_key
+
+INNER JOIN dim_date d
+    ON t.date_key = d.date_key
+
+GROUP BY
+
+r.route_key,
+r.origin_airport,
+r.destination_airport,
+
+d.year,
+d.quarter,
+d.month,
+d.month_name;
+
+GO
