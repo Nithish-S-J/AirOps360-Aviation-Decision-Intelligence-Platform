@@ -27,12 +27,15 @@ Bronze → Silver → Gold → Warehouse → Semantic Model
 
 ## Architecture
 
-![Workspace](../assets/screenshots/02_fabric_workspace/01_workspace_overview.png)
+![Workspace](https://github.com/Nithish-S-J/AirOps360-Aviation-Decision-Intelligence-Platform/blob/main/assets/workspace_file_vw.png)
 
-![Pipeline](../assets/screenshots/02_fabric_workspace/05_pipeline.png)
+![Workspace](https://github.com/Nithish-S-J/AirOps360-Aviation-Decision-Intelligence-Platform/blob/main/assets/workspace_L1.png)
 
-![Bronze Assets](../assets/screenshots/02_fabric_workspace/02_bronze_assets.png)
+![Workspace](https://github.com/Nithish-S-J/AirOps360-Aviation-Decision-Intelligence-Platform/blob/main/assets/workspace_L2.png)
 
-![Silver Assets](../assets/screenshots/02_fabric_workspace/03_silver_assets.png)
+![Pipeline](https://github.com/Nithish-S-J/AirOps360-Aviation-Decision-Intelligence-Platform/blob/main/assets/pipeline_copy_activity.png)
 
-![Gold Assets](../assets/screenshots/02_fabric_workspace/04_gold_assets.png)
+![Bronze Assets](https://github.com/Nithish-S-J/AirOps360-Aviation-Decision-Intelligence-Platform/blob/main/assets/bronze_injestion.png)
+
+![Silver Assets](https://github.com/Nithish-S-J/AirOps360-Aviation-Decision-Intelligence-Platform/blob/main/assets/silver_notebooks.png)
+
