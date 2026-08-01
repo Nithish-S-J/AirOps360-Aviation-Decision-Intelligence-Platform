@@ -1,0 +1,122 @@
+/*
+===============================================================================
+ AirOps360 — Base Measures
+===============================================================================
+
+ Semantic Model : sm_airops360
+ Measure Table  : All_Measures
+ Display Folder : 01 Base Measures
+
+ Purpose:
+ Defines the foundational aggregation measures used throughout the AirOps360
+ semantic model. These measures provide reusable calculations for flight,
+ traffic, fuel, and airport operational analytics.
+
+===============================================================================
+*/
+
+
+// -----------------------------------------------------------------------------
+// NETWORK FOUNDATION
+// -----------------------------------------------------------------------------
+
+// Total number of flight records
+Total Flights =
+COUNTROWS ( fact_flights )
+
+// Distinct airlines represented in the model
+Total Airlines =
+DISTINCTCOUNT ( dim_airline[airline_key] )
+
+// Distinct airports represented in the model
+Total Airports =
+DISTINCTCOUNT ( dim_airport[airport_key] )
+
+// Distinct routes represented in the model
+Total Routes =
+DISTINCTCOUNT ( dim_route[route_key] )
+
+
+// -----------------------------------------------------------------------------
+// AIRLINE TRAFFIC
+// -----------------------------------------------------------------------------
+
+Total Passengers =
+SUM ( fact_airline_traffic[passengers] )
+
+Total Seats =
+SUM ( fact_airline_traffic[seats] )
+
+Total Freight =
+SUM ( fact_airline_traffic[freight] )
+
+Total Mail =
+SUM ( fact_airline_traffic[mail] )
+
+
+// -----------------------------------------------------------------------------
+// FLIGHT OPERATIONS
+// -----------------------------------------------------------------------------
+
+Total Distance =
+SUM ( fact_flights[DISTANCE] )
+
+Total Air Time =
+SUM ( fact_flights[AIR_TIME] )
+
+Total Departure Delay Minutes =
+SUM ( fact_flights[DEP_DELAY] )
+
+Total Arrival Delay Minutes =
+SUM ( fact_flights[ARR_DELAY] )
+
+Total Cancelled Flights =
+SUM ( fact_flights[CANCELLED] )
+
+Total Diverted Flights =
+SUM ( fact_flights[DIVERTED] )
+
+
+// -----------------------------------------------------------------------------
+// FUEL
+// -----------------------------------------------------------------------------
+
+Total Fuel Cost =
+SUM ( fact_fuel_consumption[domestic_cost] ) +
+SUM ( fact_fuel_consumption[international_cost] )
+
+Total Fuel Gallons =
+SUM ( fact_fuel_consumption[total_gallons] )
+
+
+// -----------------------------------------------------------------------------
+// AIRPORT OPERATIONS
+// -----------------------------------------------------------------------------
+
+Total Airport Departures =
+SUM ( fact_airport_operations[actual_departures] )
+
+Total Airport Arrivals =
+SUM ( fact_airport_operations[actual_arrivals] )
+
+Total Airport Operations =
+[Total Airport Arrivals] +
+[Total Airport Departures]
+
+
+// -----------------------------------------------------------------------------
+// AIRPORT CAPACITY
+// -----------------------------------------------------------------------------
+
+Total Airport Capacity =
+SUM ( fact_airport_capacity[total_operations] )
+
+Total Air Taxi Operations =
+SUM ( fact_airport_capacity[air_taxi_operations] )
+
+Total General Aviation Operations =
+SUM ( fact_airport_capacity[general_aviation_operations] )
+
+Total Military Operations =
+SUM ( fact_airport_capacity[itinerant_military_operations] ) +
+SUM ( fact_airport_capacity[local_military_operations] )
