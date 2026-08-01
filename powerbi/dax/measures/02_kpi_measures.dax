@@ -1,0 +1,200 @@
+/*
+===============================================================================
+ AirOps360 — KPI Measures
+===============================================================================
+
+ Semantic Model : sm_airops360
+ Measure Table  : All_Measures
+ Dependency     : 01 Base Measures
+
+ Purpose:
+ Defines derived operational, efficiency, utilization, market-share, and
+ ranking KPIs used across AirOps360 analytical and executive reporting.
+
+===============================================================================
+*/
+
+
+// -----------------------------------------------------------------------------
+// FLIGHT RELIABILITY
+// -----------------------------------------------------------------------------
+
+Cancellation Rate % =
+DIVIDE (
+    [Total Cancelled Flights],
+    [Total Flights],
+    0
+)
+
+Diversion Rate % =
+DIVIDE (
+    [Total Diverted Flights],
+    [Total Flights],
+    0
+)
+
+Average Departure Delay =
+DIVIDE (
+    [Total Departure Delay Minutes],
+    [Total Flights],
+    0
+)
+
+Average Arrival Delay =
+DIVIDE (
+    [Total Arrival Delay Minutes],
+    [Total Flights],
+    0
+)
+
+
+// -----------------------------------------------------------------------------
+// PASSENGER & CAPACITY EFFICIENCY
+// -----------------------------------------------------------------------------
+
+Passenger Load Factor % =
+DIVIDE (
+    [Total Passengers],
+    [Total Seats],
+    0
+)
+
+Passengers per Flight =
+DIVIDE (
+    [Total Passengers],
+    [Total Flights],
+    0
+)
+
+Seats per Flight =
+DIVIDE (
+    [Total Seats],
+    [Total Flights],
+    0
+)
+
+Airport Capacity Utilization % =
+DIVIDE (
+    [Total Airport Operations],
+    [Total Airport Capacity],
+    0
+)
+
+
+// -----------------------------------------------------------------------------
+// FLIGHT EFFICIENCY
+// -----------------------------------------------------------------------------
+
+Average Flight Distance =
+DIVIDE (
+    [Total Distance],
+    [Total Flights],
+    0
+)
+
+Average Flight Time =
+DIVIDE (
+    [Total Air Time],
+    [Total Flights],
+    0
+)
+
+Flights per Airline =
+DIVIDE (
+    [Total Flights],
+    [Total Airlines],
+    0
+)
+
+
+// -----------------------------------------------------------------------------
+// FUEL ECONOMICS
+// -----------------------------------------------------------------------------
+
+Fuel Cost per Flight =
+DIVIDE (
+    [Total Fuel Cost],
+    [Total Flights],
+    0
+)
+
+Fuel Cost per Passenger =
+DIVIDE (
+    [Total Fuel Cost],
+    [Total Passengers],
+    0
+)
+
+Fuel Gallons per Flight =
+DIVIDE (
+    [Total Fuel Gallons],
+    [Total Flights],
+    0
+)
+
+
+// -----------------------------------------------------------------------------
+// CARGO EFFICIENCY
+// -----------------------------------------------------------------------------
+
+Freight per Flight =
+DIVIDE (
+    [Total Freight],
+    [Total Flights],
+    0
+)
+
+Mail per Flight =
+DIVIDE (
+    [Total Mail],
+    [Total Flights],
+    0
+)
+
+
+// -----------------------------------------------------------------------------
+// AIRLINE MARKET SHARE
+// -----------------------------------------------------------------------------
+
+Airline Market Share % =
+DIVIDE (
+    [Total Flights],
+    CALCULATE (
+        [Total Flights],
+        REMOVEFILTERS ( dim_airline )
+    ),
+    0
+)
+
+Passenger Share % =
+DIVIDE (
+    [Total Passengers],
+    CALCULATE (
+        [Total Passengers],
+        REMOVEFILTERS ( dim_airline )
+    ),
+    0
+)
+
+
+// -----------------------------------------------------------------------------
+// AIRLINE RANKING
+// -----------------------------------------------------------------------------
+
+Airline Flight Rank =
+RANKX (
+    ALL ( dim_airline[airline_name] ),
+    [Total Flights],
+    ,
+    DESC,
+    DENSE
+)
+
+Airline Passenger Rank =
+RANKX (
+    ALL ( dim_airline[airline_name] ),
+    [Total Passengers],
+    ,
+    DESC,
+    DENSE
+)
