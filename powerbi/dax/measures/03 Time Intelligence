@@ -1,0 +1,275 @@
+/*
+===============================================================================
+ AirOps360 — Time Intelligence & Trend Measures
+===============================================================================
+
+ Semantic Model : sm_airops360
+ Measure Table  : All_Measures
+ Dependency     : 01 Base Measures, 02 KPI Measures
+ Date Dimension : dim_date
+ Date Column    : dim_date[flight_date]
+
+ Purpose:
+ Provides day-over-day comparisons, rolling 7-day analytics, running totals,
+ variance analysis, and operational trend classification for AirOps360.
+
+===============================================================================
+*/
+
+
+// -----------------------------------------------------------------------------
+// DAY-OVER-DAY ANALYSIS
+// -----------------------------------------------------------------------------
+
+Previous Day Flights =
+CALCULATE (
+    [Total Flights],
+    DATEADD ( dim_date[flight_date], -1, DAY )
+)
+
+
+Daily Flight Change =
+VAR CurrentFlights = [Total Flights]
+VAR PreviousFlights = [Previous Day Flights]
+RETURN
+    IF (
+        NOT ISBLANK ( PreviousFlights ),
+        CurrentFlights - PreviousFlights
+    )
+
+
+Daily Flight Change % =
+VAR PreviousFlights = [Previous Day Flights]
+RETURN
+    IF (
+        NOT ISBLANK ( PreviousFlights ),
+        DIVIDE (
+            [Total Flights] - PreviousFlights,
+            PreviousFlights
+        )
+    )
+
+
+// -----------------------------------------------------------------------------
+// ROLLING 7-DAY FLIGHT ANALYSIS
+// -----------------------------------------------------------------------------
+
+Rolling 7-Day Flights =
+CALCULATE (
+    [Total Flights],
+    DATESINPERIOD (
+        dim_date[flight_date],
+        MAX ( dim_date[flight_date] ),
+        -7,
+        DAY
+    )
+)
+
+
+Rolling 7-Day Avg Flights =
+VAR Period =
+    DATESINPERIOD (
+        dim_date[flight_date],
+        MAX ( dim_date[flight_date] ),
+        -7,
+        DAY
+    )
+RETURN
+    AVERAGEX (
+        Period,
+        CALCULATE ( [Total Flights] )
+    )
+
+
+// -----------------------------------------------------------------------------
+// ROLLING 7-DAY PASSENGER ANALYSIS
+// -----------------------------------------------------------------------------
+
+Rolling 7-Day Passengers =
+CALCULATE (
+    [Total Passengers],
+    DATESINPERIOD (
+        dim_date[flight_date],
+        MAX ( dim_date[flight_date] ),
+        -7,
+        DAY
+    )
+)
+
+
+Rolling 7-Day Avg Passengers =
+VAR Period =
+    DATESINPERIOD (
+        dim_date[flight_date],
+        MAX ( dim_date[flight_date] ),
+        -7,
+        DAY
+    )
+RETURN
+    AVERAGEX (
+        Period,
+        CALCULATE ( [Total Passengers] )
+    )
+
+
+// -----------------------------------------------------------------------------
+// ROLLING 7-DAY RELIABILITY
+// -----------------------------------------------------------------------------
+
+Rolling 7-Day Avg Arrival Delay =
+VAR Period =
+    DATESINPERIOD (
+        dim_date[flight_date],
+        MAX ( dim_date[flight_date] ),
+        -7,
+        DAY
+    )
+RETURN
+    AVERAGEX (
+        Period,
+        CALCULATE ( [Avg Arrival Delay] )
+    )
+
+
+Rolling 7-Day Avg Departure Delay =
+VAR Period =
+    DATESINPERIOD (
+        dim_date[flight_date],
+        MAX ( dim_date[flight_date] ),
+        -7,
+        DAY
+    )
+RETURN
+    AVERAGEX (
+        Period,
+        CALCULATE ( [Avg Departure Delay] )
+    )
+
+
+Rolling 7-Day Cancellation Rate =
+VAR Period =
+    DATESINPERIOD (
+        dim_date[flight_date],
+        MAX ( dim_date[flight_date] ),
+        -7,
+        DAY
+    )
+VAR CancelledFlights =
+    CALCULATE (
+        [Total Cancelled Flights],
+        Period
+    )
+VAR Flights =
+    CALCULATE (
+        [Total Flights],
+        Period
+    )
+RETURN
+    DIVIDE ( CancelledFlights, Flights )
+
+
+Rolling 7-Day Diversion Rate =
+VAR Period =
+    DATESINPERIOD (
+        dim_date[flight_date],
+        MAX ( dim_date[flight_date] ),
+        -7,
+        DAY
+    )
+VAR DivertedFlights =
+    CALCULATE (
+        [Total Diverted Flights],
+        Period
+    )
+VAR Flights =
+    CALCULATE (
+        [Total Flights],
+        Period
+    )
+RETURN
+    DIVIDE ( DivertedFlights, Flights )
+
+
+// -----------------------------------------------------------------------------
+// RUNNING TOTALS
+// -----------------------------------------------------------------------------
+
+Running Total Flights =
+VAR CurrentDate =
+    MAX ( dim_date[flight_date] )
+RETURN
+    CALCULATE (
+        [Total Flights],
+        FILTER (
+            ALLSELECTED ( dim_date[flight_date] ),
+            dim_date[flight_date] <= CurrentDate
+        )
+    )
+
+
+Running Total Passengers =
+VAR CurrentDate =
+    MAX ( dim_date[flight_date] )
+RETURN
+    CALCULATE (
+        [Total Passengers],
+        FILTER (
+            ALLSELECTED ( dim_date[flight_date] ),
+            dim_date[flight_date] <= CurrentDate
+        )
+    )
+
+
+Running Total Cancelled Flights =
+VAR CurrentDate =
+    MAX ( dim_date[flight_date] )
+RETURN
+    CALCULATE (
+        [Total Cancelled Flights],
+        FILTER (
+            ALLSELECTED ( dim_date[flight_date] ),
+            dim_date[flight_date] <= CurrentDate
+        )
+    )
+
+
+// -----------------------------------------------------------------------------
+// TREND & VARIANCE ANALYSIS
+// -----------------------------------------------------------------------------
+
+Daily Flights vs 7-Day Average =
+[Total Flights] - [Rolling 7-Day Avg Flights]
+
+
+Daily Flights Variance % =
+VAR RollingAverage =
+    [Rolling 7-Day Avg Flights]
+RETURN
+    DIVIDE (
+        [Total Flights] - RollingAverage,
+        RollingAverage
+    )
+
+
+// -----------------------------------------------------------------------------
+// OPERATIONAL TREND CLASSIFICATION
+// -----------------------------------------------------------------------------
+
+Operational Trend Status =
+VAR CurrentFlights =
+    [Total Flights]
+VAR RollingAverage =
+    [Rolling 7-Day Avg Flights]
+VAR VariancePct =
+    DIVIDE (
+        CurrentFlights - RollingAverage,
+        RollingAverage
+    )
+RETURN
+    SWITCH (
+        TRUE (),
+        ISBLANK ( RollingAverage ), BLANK (),
+        VariancePct >= 0.10, "Above Trend",
+        VariancePct <= -0.10, "Below Trend",
+        "Stable"
+    )
