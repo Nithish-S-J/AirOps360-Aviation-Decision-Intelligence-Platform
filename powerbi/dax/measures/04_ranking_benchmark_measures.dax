@@ -1,0 +1,247 @@
+/*
+===============================================================================
+ AirOps360 — Ranking & Benchmark Measures
+===============================================================================
+
+ Semantic Model : sm_airops360
+ Measure Table  : All_Measures
+ Dependency     : Base Measures, KPI Measures and Reliability Measures
+
+ Purpose:
+ Provides context-aware airline and airport rankings, market-share analysis,
+ network benchmarks, performance variance, and benchmark classifications for
+ comparative operational intelligence.
+
+===============================================================================
+*/
+
+
+// -----------------------------------------------------------------------------
+// AIRLINE RANKING
+// -----------------------------------------------------------------------------
+
+Airline Rank by Flights =
+IF (
+    ISINSCOPE ( dim_airline[airline_name] ),
+    RANKX (
+        ALLSELECTED ( dim_airline[airline_name] ),
+        [Total Flights],
+        ,
+        DESC,
+        DENSE
+    )
+)
+
+
+Airline Rank by Passengers =
+IF (
+    ISINSCOPE ( dim_airline[airline_name] ),
+    RANKX (
+        ALLSELECTED ( dim_airline[airline_name] ),
+        [Total Passengers],
+        ,
+        DESC,
+        DENSE
+    )
+)
+
+
+Airline Rank by On-Time Performance =
+IF (
+    ISINSCOPE ( dim_airline[airline_name] ),
+    RANKX (
+        ALLSELECTED ( dim_airline[airline_name] ),
+        [On-Time Arrival %],
+        ,
+        DESC,
+        DENSE
+    )
+)
+
+
+Airline Rank by Arrival Delay =
+IF (
+    ISINSCOPE ( dim_airline[airline_name] ),
+    RANKX (
+        ALLSELECTED ( dim_airline[airline_name] ),
+        [Average Arrival Delay],
+        ,
+        ASC,
+        DENSE
+    )
+)
+
+
+// -----------------------------------------------------------------------------
+// AIRPORT RANKING
+// -----------------------------------------------------------------------------
+
+Airport Rank by Operations =
+IF (
+    ISINSCOPE ( dim_airport[airport_name] ),
+    RANKX (
+        ALLSELECTED ( dim_airport[airport_name] ),
+        [Total Airport Operations],
+        ,
+        DESC,
+        DENSE
+    )
+)
+
+
+Airport Rank by Departures =
+IF (
+    ISINSCOPE ( dim_airport[airport_name] ),
+    RANKX (
+        ALLSELECTED ( dim_airport[airport_name] ),
+        [Total Airport Departures],
+        ,
+        DESC,
+        DENSE
+    )
+)
+
+
+Airport Rank by Arrivals =
+IF (
+    ISINSCOPE ( dim_airport[airport_name] ),
+    RANKX (
+        ALLSELECTED ( dim_airport[airport_name] ),
+        [Total Airport Arrivals],
+        ,
+        DESC,
+        DENSE
+    )
+)
+
+
+// -----------------------------------------------------------------------------
+// MARKET POSITION
+// -----------------------------------------------------------------------------
+
+Airline Flight Share % =
+DIVIDE (
+    [Total Flights],
+    CALCULATE (
+        [Total Flights],
+        REMOVEFILTERS ( dim_airline )
+    )
+)
+
+
+Airline Passenger Share % =
+DIVIDE (
+    [Total Passengers],
+    CALCULATE (
+        [Total Passengers],
+        REMOVEFILTERS ( dim_airline )
+    )
+)
+
+
+Is Top 5 Airline Flag =
+VAR AirlineRank =
+    [Airline Rank by Flights]
+RETURN
+    IF (
+        NOT ISBLANK ( AirlineRank ) &&
+        AirlineRank <= 5,
+        1,
+        0
+    )
+
+
+// -----------------------------------------------------------------------------
+// NETWORK ON-TIME PERFORMANCE BENCHMARK
+// -----------------------------------------------------------------------------
+
+Network On-Time Arrival % =
+CALCULATE (
+    [On-Time Arrival %],
+    REMOVEFILTERS ( dim_airline )
+)
+
+
+On-Time Performance vs Network =
+VAR AirlineOTP =
+    [On-Time Arrival %]
+VAR NetworkOTP =
+    [Network On-Time Arrival %]
+RETURN
+    IF (
+        NOT ISBLANK ( AirlineOTP ) &&
+        NOT ISBLANK ( NetworkOTP ),
+        AirlineOTP - NetworkOTP
+    )
+
+
+// -----------------------------------------------------------------------------
+// NETWORK ARRIVAL DELAY BENCHMARK
+// -----------------------------------------------------------------------------
+
+Network Avg Arrival Delay =
+CALCULATE (
+    [Average Arrival Delay],
+    REMOVEFILTERS ( dim_airline )
+)
+
+
+Arrival Delay vs Network =
+VAR CurrentDelay =
+    [Average Arrival Delay]
+VAR NetworkDelay =
+    [Network Avg Arrival Delay]
+RETURN
+    IF (
+        NOT ISBLANK ( CurrentDelay ) &&
+        NOT ISBLANK ( NetworkDelay ),
+        CurrentDelay - NetworkDelay
+    )
+
+
+Arrival Delay vs Network % =
+VAR CurrentDelay =
+    [Average Arrival Delay]
+VAR NetworkDelay =
+    [Network Avg Arrival Delay]
+RETURN
+    IF (
+        NOT ISBLANK ( CurrentDelay ) &&
+        NOT ISBLANK ( NetworkDelay ),
+        DIVIDE (
+            CurrentDelay - NetworkDelay,
+            NetworkDelay
+        )
+    )
+
+
+// -----------------------------------------------------------------------------
+// BENCHMARK CLASSIFICATION
+// -----------------------------------------------------------------------------
+
+Arrival Delay Benchmark Status =
+VAR Difference =
+    [Arrival Delay vs Network]
+RETURN
+    SWITCH (
+        TRUE (),
+        ISBLANK ( Difference ), BLANK (),
+        Difference <= -5, "Significantly Better",
+        Difference < 0, "Better",
+        Difference <= 5, "Near Network Average",
+        "Needs Attention"
+    )
+
+
+On-Time Benchmark Status =
+VAR Difference =
+    [On-Time Performance vs Network]
+RETURN
+    SWITCH (
+        TRUE (),
+        ISBLANK ( Difference ), BLANK (),
+        Difference >= 0.05, "Significantly Better",
+        Difference > 0, "Better",
+        Difference >= -0.05, "Near Network Average",
+        "Needs Attention"
+    )
