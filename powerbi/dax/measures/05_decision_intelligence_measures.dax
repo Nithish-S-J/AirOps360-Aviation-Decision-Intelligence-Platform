@@ -1,0 +1,478 @@
+/*
+===============================================================================
+ AirOps360 — Decision Intelligence Measures
+===============================================================================
+
+ Semantic Model : sm_airops360
+ Measure Table  : All_Measures
+
+ Purpose:
+ Advanced decision-intelligence layer combining operational reliability,
+ disruption risk, network health, passenger demand, fuel efficiency,
+ airline performance, and airport capacity pressure.
+
+===============================================================================
+*/
+
+
+// =============================================================================
+// 01 — DISRUPTION & DELAY SEVERITY
+// =============================================================================
+
+Delayed Arrival Flights =
+CALCULATE (
+    COUNTROWS ( fact_flights ),
+    NOT ISBLANK ( fact_flights[ARR_DELAY] ),
+    fact_flights[ARR_DELAY] > 15,
+    fact_flights[CANCELLED] = 0
+)
+
+
+Severe Delay Flights =
+CALCULATE (
+    COUNTROWS ( fact_flights ),
+    NOT ISBLANK ( fact_flights[ARR_DELAY] ),
+    fact_flights[ARR_DELAY] >= 60,
+    fact_flights[CANCELLED] = 0
+)
+
+
+Delayed Arrival Rate % =
+DIVIDE (
+    [Delayed Arrival Flights],
+    [Total Flights]
+)
+
+
+Severe Delay Rate % =
+DIVIDE (
+    [Severe Delay Flights],
+    [Total Flights]
+)
+
+
+Disrupted Flights =
+CALCULATE (
+    COUNTROWS ( fact_flights ),
+    fact_flights[CANCELLED] = 1
+        || fact_flights[DIVERTED] = 1
+        || (
+            NOT ISBLANK ( fact_flights[ARR_DELAY] )
+                && fact_flights[ARR_DELAY] >= 60
+        )
+)
+
+
+Network Disruption Rate % =
+DIVIDE (
+    [Disrupted Flights],
+    [Total Flights]
+)
+
+
+// =============================================================================
+// 02 — OPERATIONAL RELIABILITY
+// =============================================================================
+
+Operational Reliability Score =
+VAR OTP =
+    COALESCE ( [On-Time Arrival %], 0 )
+VAR CancelPenalty =
+    MIN ( COALESCE ( [Cancellation Rate %], 0 ), 0.10 ) / 0.10
+VAR DiversionPenalty =
+    MIN ( COALESCE ( [Diversion Rate %], 0 ), 0.05 ) / 0.05
+VAR SevereDelayPenalty =
+    MIN ( COALESCE ( [Severe Delay Rate %], 0 ), 0.20 ) / 0.20
+VAR Score =
+      OTP * 70
+    + ( 1 - CancelPenalty ) * 15
+    + ( 1 - DiversionPenalty ) * 5
+    + ( 1 - SevereDelayPenalty ) * 10
+RETURN
+    IF (
+        [Total Flights] > 0,
+        MAX ( 0, MIN ( 100, Score ) )
+    )
+
+
+Operational Reliability Tier =
+VAR Score =
+    [Operational Reliability Score]
+RETURN
+    SWITCH (
+        TRUE (),
+        ISBLANK ( Score ), BLANK (),
+        Score >= 90, "Excellent",
+        Score >= 80, "Strong",
+        Score >= 70, "Watch",
+        Score >= 60, "At Risk",
+        "Critical"
+    )
+
+
+// =============================================================================
+// 03 — OPERATIONAL RISK
+// =============================================================================
+
+Delay Severity Index =
+VAR DelayRate =
+    COALESCE ( [Delayed Arrival Rate %], 0 )
+VAR SevereRate =
+    COALESCE ( [Severe Delay Rate %], 0 )
+VAR AvgDelay =
+    MAX ( COALESCE ( [Average Arrival Delay], 0 ), 0 )
+VAR DelayComponent =
+    MIN ( DelayRate / 0.40, 1 )
+VAR SevereComponent =
+    MIN ( SevereRate / 0.15, 1 )
+VAR DurationComponent =
+    MIN ( AvgDelay / 60, 1 )
+RETURN
+    IF (
+        [Total Flights] > 0,
+        100 *
+        (
+            DelayComponent * 0.40
+            + SevereComponent * 0.35
+            + DurationComponent * 0.25
+        )
+    )
+
+
+Operational Risk Score =
+VAR Disruption =
+    MIN (
+        COALESCE ( [Network Disruption Rate %], 0 ) / 0.15,
+        1
+    )
+VAR DelaySeverity =
+    DIVIDE (
+        COALESCE ( [Delay Severity Index], 0 ),
+        100
+    )
+VAR Cancellation =
+    MIN (
+        COALESCE ( [Cancellation Rate %], 0 ) / 0.10,
+        1
+    )
+VAR Diversion =
+    MIN (
+        COALESCE ( [Diversion Rate %], 0 ) / 0.05,
+        1
+    )
+RETURN
+    IF (
+        [Total Flights] > 0,
+        100 *
+        (
+            Disruption * 0.35
+            + DelaySeverity * 0.35
+            + Cancellation * 0.20
+            + Diversion * 0.10
+        )
+    )
+
+
+Operational Risk Tier =
+VAR Risk =
+    [Operational Risk Score]
+RETURN
+    SWITCH (
+        TRUE (),
+        ISBLANK ( Risk ), BLANK (),
+        Risk >= 75, "Critical",
+        Risk >= 50, "High",
+        Risk >= 25, "Moderate",
+        "Low"
+    )
+
+
+// =============================================================================
+// 04 — NETWORK HEALTH
+// =============================================================================
+
+Network Health Index =
+VAR Reliability =
+    [Operational Reliability Score]
+VAR Risk =
+    [Operational Risk Score]
+VAR LoadFactor =
+    MIN (
+        DIVIDE (
+            COALESCE ( [Passenger Load Factor %], 0 ),
+            0.85
+        ),
+        1
+    )
+VAR Health =
+      Reliability * 0.55
+    + ( 100 - Risk ) * 0.30
+    + ( LoadFactor * 100 ) * 0.15
+RETURN
+    IF (
+        [Total Flights] > 0,
+        MAX ( 0, MIN ( 100, Health ) )
+    )
+
+
+Network Health Status =
+VAR Score =
+    [Network Health Index]
+RETURN
+    SWITCH (
+        TRUE (),
+        ISBLANK ( Score ), BLANK (),
+        Score >= 85, "Healthy",
+        Score >= 70, "Stable",
+        Score >= 55, "Watch",
+        Score >= 40, "At Risk",
+        "Critical"
+    )
+
+
+// =============================================================================
+// 05 — PASSENGER DEMAND & UTILIZATION
+// =============================================================================
+
+Passenger Demand Index =
+VAR CurrentPassengers =
+    [Total Passengers]
+VAR NetworkAvgPassengers =
+    AVERAGEX (
+        ALLSELECTED ( dim_airline[airline_name] ),
+        CALCULATE ( [Total Passengers] )
+    )
+RETURN
+    IF (
+        CurrentPassengers > 0
+            && NetworkAvgPassengers > 0,
+        100 *
+        DIVIDE (
+            CurrentPassengers,
+            NetworkAvgPassengers
+        )
+    )
+
+
+Seat Utilization Score =
+VAR LF =
+    [Passenger Load Factor %]
+RETURN
+    IF (
+        NOT ISBLANK ( LF ),
+        MIN (
+            100,
+            DIVIDE ( LF, 0.85 ) * 100
+        )
+    )
+
+
+// =============================================================================
+// 06 — FUEL ECONOMICS & EFFICIENCY
+// =============================================================================
+
+Fuel Cost per Gallon =
+DIVIDE (
+    [Total Fuel Cost],
+    [Total Fuel Gallons]
+)
+
+
+Passengers per Fuel Gallon =
+DIVIDE (
+    [Total Passengers],
+    [Total Fuel Gallons]
+)
+
+
+Fuel Gallons per Passenger =
+DIVIDE (
+    [Total Fuel Gallons],
+    [Total Passengers]
+)
+
+
+Fuel Efficiency Index =
+VAR CurrentEfficiency =
+    [Passengers per Fuel Gallon]
+VAR NetworkEfficiency =
+    CALCULATE (
+        [Passengers per Fuel Gallon],
+        REMOVEFILTERS ( dim_airline )
+    )
+RETURN
+    IF (
+        CurrentEfficiency > 0
+            && NetworkEfficiency > 0,
+        100 *
+        DIVIDE (
+            CurrentEfficiency,
+            NetworkEfficiency
+        )
+    )
+
+
+Fuel Cost Efficiency Index =
+VAR CurrentCost =
+    [Fuel Cost per Passenger]
+VAR NetworkCost =
+    CALCULATE (
+        [Fuel Cost per Passenger],
+        REMOVEFILTERS ( dim_airline )
+    )
+RETURN
+    IF (
+        CurrentCost > 0
+            && NetworkCost > 0,
+        100 *
+        DIVIDE (
+            NetworkCost,
+            CurrentCost
+        )
+    )
+
+
+// =============================================================================
+// 07 — AIRLINE PERFORMANCE
+// =============================================================================
+
+Airline Efficiency Score =
+VAR FuelEfficiency =
+    MIN (
+        COALESCE ( [Fuel Efficiency Index], 0 ),
+        150
+    )
+VAR CostEfficiency =
+    MIN (
+        COALESCE ( [Fuel Cost Efficiency Index], 0 ),
+        150
+    )
+VAR SeatUtilization =
+    COALESCE ( [Seat Utilization Score], 0 )
+RETURN
+    IF (
+        [Total Passengers] > 0
+            && [Total Fuel Gallons] > 0,
+        MIN (
+            100,
+              FuelEfficiency * 0.35
+            + CostEfficiency * 0.35
+            + SeatUtilization * 0.30
+        )
+    )
+
+
+Airline Performance Index =
+VAR Reliability =
+    [Operational Reliability Score]
+VAR Efficiency =
+    [Airline Efficiency Score]
+VAR LoadFactor =
+    [Seat Utilization Score]
+VAR PassengerShare =
+    MIN (
+        DIVIDE (
+            COALESCE ( [Airline Passenger Share %], 0 ),
+            0.20
+        ),
+        1
+    ) * 100
+RETURN
+    IF (
+        [Total Flights] > 0,
+        MAX (
+            0,
+            MIN (
+                100,
+                  Reliability * 0.45
+                + COALESCE ( Efficiency, 0 ) * 0.25
+                + COALESCE ( LoadFactor, 0 ) * 0.20
+                + PassengerShare * 0.10
+            )
+        )
+    )
+
+
+Airline Performance Tier =
+VAR Score =
+    [Airline Performance Index]
+RETURN
+    SWITCH (
+        TRUE (),
+        ISBLANK ( Score ), BLANK (),
+        Score >= 85, "Leader",
+        Score >= 70, "Strong Performer",
+        "Competitive",
+        Score >= 40, "Underperforming",
+        "Critical"
+    )
+
+
+// =============================================================================
+// 08 — AIRPORT CAPACITY & PRESSURE
+// =============================================================================
+
+Airport Throughput =
+[Total Airport Arrivals]
+    + [Total Airport Departures]
+
+
+Airport Capacity Headroom =
+[Total Airport Capacity]
+    - [Airport Throughput]
+
+
+Airport Capacity Headroom % =
+DIVIDE (
+    [Airport Capacity Headroom],
+    [Total Airport Capacity]
+)
+
+
+Airport Pressure Index =
+VAR Utilization =
+    MIN (
+        MAX (
+            COALESCE ( [Airport Capacity Utilization %], 0 ),
+            0
+        ),
+        1
+    )
+VAR CapacityPressure =
+    Utilization
+VAR OperationsScale =
+    VAR CurrentOperations =
+        [Total Airport Operations]
+    VAR MaxOperations =
+        MAXX (
+            ALLSELECTED ( dim_airport[airport_name] ),
+            CALCULATE ( [Total Airport Operations] )
+        )
+    RETURN
+        DIVIDE (
+            CurrentOperations,
+            MaxOperations
+        )
+RETURN
+    IF (
+        [Total Airport Capacity] > 0,
+        100 *
+        (
+            CapacityPressure * 0.70
+            + OperationsScale * 0.30
+        )
+    )
+
+
+Airport Pressure Tier =
+VAR Score =
+    [Airport Pressure Index]
+RETURN
+    SWITCH (
+        TRUE (),
+        ISBLANK ( Score ), BLANK (),
+        Score >= 85, "Critical Pressure",
+        Score >= 70, "High Pressure",
+        Score >= 50, "Moderate Pressure",
+        "Optimal"
+    )
