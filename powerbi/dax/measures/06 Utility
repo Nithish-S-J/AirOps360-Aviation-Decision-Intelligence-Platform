@@ -1,0 +1,430 @@
+/*
+===============================================================================
+ AirOps360 — Utility Measures
+===============================================================================
+
+ Semantic Model : sm_airops360
+ Measure Table  : All_Measures
+ Display Folder : 06 Utility
+
+ Purpose:
+ Provides presentation and report-context utilities for the AirOps360
+ Power BI experience, including dynamic filter context, report titles,
+ executive KPI labels, trend indicators, and data coverage metadata.
+
+===============================================================================
+*/
+
+
+// =============================================================================
+// 01 — SELECTED FILTER CONTEXT
+// =============================================================================
+
+Selected Airline =
+VAR Selection =
+    SELECTEDVALUE ( dim_airline[airline_name] )
+RETURN
+    COALESCE ( Selection, "All Airlines" )
+
+
+Selected Airport =
+VAR Selection =
+    SELECTEDVALUE ( dim_airport[airport_name] )
+RETURN
+    COALESCE ( Selection, "All Airports" )
+
+
+Selected Route =
+VAR Origin =
+    SELECTEDVALUE ( dim_route[origin_airport] )
+VAR Destination =
+    SELECTEDVALUE ( dim_route[destination_airport] )
+RETURN
+    IF (
+        NOT ISBLANK ( Origin )
+            && NOT ISBLANK ( Destination ),
+        Origin & " → " & Destination,
+        "All Routes"
+    )
+
+
+Selected Date =
+VAR MinDate =
+    MIN ( dim_date[flight_date] )
+VAR MaxDate =
+    MAX ( dim_date[flight_date] )
+RETURN
+    IF (
+        MinDate = MaxDate,
+        FORMAT ( MinDate, "dd MMM yyyy" ),
+        FORMAT ( MinDate, "dd MMM yyyy" )
+            & " - "
+            & FORMAT ( MaxDate, "dd MMM yyyy" )
+    )
+
+
+// =============================================================================
+// 02 — ACTIVE FILTER CONTEXT
+// =============================================================================
+
+Active Airline Filter =
+VAR CountSelected =
+    COUNTROWS (
+        ALLSELECTED ( dim_airline[airline_name] )
+    )
+VAR CountAll =
+    COUNTROWS (
+        ALL ( dim_airline[airline_name] )
+    )
+RETURN
+    IF (
+        CountSelected < CountAll,
+        FORMAT ( CountSelected, "#,0" )
+            & " Airline(s) Selected",
+        "All Airlines"
+    )
+
+
+Active Airport Filter =
+VAR CountSelected =
+    COUNTROWS (
+        ALLSELECTED ( dim_airport[airport_name] )
+    )
+VAR CountAll =
+    COUNTROWS (
+        ALL ( dim_airport[airport_name] )
+    )
+RETURN
+    IF (
+        CountSelected < CountAll,
+        FORMAT ( CountSelected, "#,0" )
+            & " Airport(s) Selected",
+        "All Airports"
+    )
+
+
+Active Route Filter =
+VAR SelectedRoutes =
+    COUNTROWS (
+        ALLSELECTED ( dim_route[route_key] )
+    )
+VAR AllRoutes =
+    COUNTROWS (
+        ALL ( dim_route[route_key] )
+    )
+RETURN
+    IF (
+        SelectedRoutes < AllRoutes,
+        FORMAT ( SelectedRoutes, "#,0" )
+            & " Route(s) Selected",
+        "All Routes"
+    )
+
+
+// =============================================================================
+// 03 — REPORT PAGE TITLES & SUBTITLES
+// =============================================================================
+
+Executive Overview Title =
+"AirOps360 | Executive Network Overview"
+
+
+Executive Overview Subtitle =
+VAR Airline =
+    [Selected Airline]
+VAR Period =
+    [Selected Date]
+RETURN
+    Airline
+        & "  |  "
+        & Period
+
+
+Operational Performance Title =
+"Operational Performance & Reliability"
+
+
+Operational Performance Subtitle =
+VAR Airline =
+    [Selected Airline]
+VAR Airport =
+    [Selected Airport]
+VAR Period =
+    [Selected Date]
+RETURN
+    Airline
+        & "  |  "
+        & Airport
+        & "  |  "
+        & Period
+
+
+Airline Route Title =
+"Airline & Route Intelligence"
+
+
+Airline Route Subtitle =
+VAR Airline =
+    [Selected Airline]
+VAR RouteSelection =
+    [Selected Route]
+RETURN
+    Airline
+        & " | "
+        & RouteSelection
+
+
+Airport Operations Title =
+"Airport Capacity & Operations"
+
+
+Airport Operations Subtitle =
+VAR Airport =
+    [Selected Airport]
+VAR Period =
+    [Selected Date]
+RETURN
+    Airport
+        & "  |  "
+        & Period
+
+
+Fuel Economics Title =
+"Fuel & Operating Economics"
+
+
+Fuel Economics Subtitle =
+VAR Airline =
+    [Selected Airline]
+VAR Period =
+    [Selected Date]
+RETURN
+    Airline
+        & "  |  "
+        & Period
+
+
+Executive Intelligence Title =
+"Executive Decision Intelligence"
+
+
+// =============================================================================
+// 04 — FILTER CONTEXT SUMMARY
+// =============================================================================
+
+Filter Context Summary =
+VAR AirlineContext =
+    [Active Airline Filter]
+VAR AirportContext =
+    [Active Airport Filter]
+VAR RouteContext =
+    [Active Route Filter]
+VAR Period =
+    [Selected Date]
+RETURN
+    AirlineContext
+        & " | "
+        & AirportContext
+        & " | "
+        & RouteContext
+        & " | "
+        & Period
+
+
+// =============================================================================
+// 05 — EXECUTIVE KPI LABELS
+// =============================================================================
+
+Network Health Label =
+VAR Score =
+    [Network Health Index]
+VAR Status =
+    [Network Health Status]
+RETURN
+    IF (
+        NOT ISBLANK ( Score ),
+        Status
+            & " | "
+            & FORMAT ( Score, "0.0" )
+            & "/100"
+    )
+
+
+Operational Reliability Label =
+VAR Score =
+    [Operational Reliability Score]
+VAR Tier =
+    [Operational Reliability Tier]
+RETURN
+    IF (
+        NOT ISBLANK ( Score ),
+        Tier
+            & " | "
+            & FORMAT ( Score, "0.0" )
+            & "/100"
+    )
+
+
+Operational Risk Label =
+VAR Score =
+    [Operational Risk Score]
+VAR Tier =
+    [Operational Risk Tier]
+RETURN
+    IF (
+        NOT ISBLANK ( Score ),
+        Tier
+            & " | "
+            & FORMAT ( Score, "0.0" )
+            & "/100"
+    )
+
+
+Airline Performance Label =
+VAR Score =
+    [Airline Performance Index]
+VAR Tier =
+    [Airline Performance Tier]
+RETURN
+    IF (
+        NOT ISBLANK ( Score ),
+        Tier
+            & " | "
+            & FORMAT ( Score, "0.0" )
+            & "/100"
+    )
+
+
+Airport Pressure Label =
+VAR Score =
+    [Airport Pressure Index]
+VAR Tier =
+    [Airport Pressure Tier]
+RETURN
+    IF (
+        NOT ISBLANK ( Score ),
+        Tier
+            & " | "
+            & FORMAT ( Score, "0.0" )
+            & "/100"
+    )
+
+
+Route Performance Label =
+VAR PerformanceScore =
+    [Route Performance Index]
+VAR PerformanceTier =
+    [Route Performance Tier]
+RETURN
+    IF (
+        NOT ISBLANK ( PerformanceScore ),
+        PerformanceTier
+            & " | "
+            & FORMAT (
+                PerformanceScore,
+                "0.0"
+            )
+            & "/100"
+    )
+
+
+Executive Attention Label =
+VAR AttentionScore =
+    [Executive Attention Score]
+VAR AttentionStatus =
+    [Executive Attention Level]
+RETURN
+    IF (
+        NOT ISBLANK ( AttentionScore ),
+        AttentionStatus
+            & " | "
+            & FORMAT (
+                AttentionScore,
+                "0.0"
+            )
+            & "/100"
+    )
+
+
+// =============================================================================
+// 06 — VISUAL PERFORMANCE INDICATORS
+// =============================================================================
+
+Flight Trend Indicator =
+VAR Change =
+    [Daily Flight Change %]
+RETURN
+    SWITCH (
+        TRUE (),
+        ISBLANK ( Change ), BLANK (),
+        Change > 0.05, "▲ Strong Increase",
+        Change > 0, "▲ Increase",
+        Change < -0.05, "▼ Strong Decline",
+        Change < 0, "▼ Decline",
+        "● Stable"
+    )
+
+
+Reliability Indicator =
+VAR Score =
+    [Operational Reliability Score]
+RETURN
+    SWITCH (
+        TRUE (),
+        ISBLANK ( Score ), BLANK (),
+        Score >= 85, "● Strong",
+        Score >= 70, "● Stable",
+        Score >= 55, "▲ Watch",
+        "▲ Action Required"
+    )
+
+
+Delay Benchmark Indicator =
+VAR Difference =
+    [Arrival Delay vs Network]
+RETURN
+    SWITCH (
+        TRUE (),
+        ISBLANK ( Difference ), BLANK (),
+        Difference <= -5, "▲ Significantly Better",
+        Difference < 0, "▲ Better than Network",
+        Difference <= 5, "● Near Network",
+        "▼ Worse than Network"
+    )
+
+
+// =============================================================================
+// 07 — DATA COVERAGE & FRESHNESS
+// =============================================================================
+
+Data Coverage Label =
+VAR MinDate =
+    CALCULATE (
+        MIN ( dim_date[flight_date] ),
+        ALL ( dim_date )
+    )
+VAR MaxDate =
+    CALCULATE (
+        MAX ( dim_date[flight_date] ),
+        ALL ( dim_date )
+    )
+RETURN
+    "Data Coverage: "
+        & FORMAT ( MinDate, "dd MMM yyyy" )
+        & " - "
+        & FORMAT ( MaxDate, "dd MMM yyyy" )
+
+
+Last Available Data Date =
+CALCULATE (
+    MAX ( dim_date[flight_date] ),
+    ALL ( dim_date )
+)
+
+
+Last Available Data Label =
+"Latest Data: "
+    & FORMAT (
+        [Last Available Data Date],
+        "dd MMM yyyy"
+    )
