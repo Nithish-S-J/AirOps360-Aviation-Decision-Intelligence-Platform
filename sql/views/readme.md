@@ -7,7 +7,7 @@ This folder contains the analytical SQL views developed in the AirOps360 Microso
 These views transform curated Gold-layer fact and dimension tables into business-ready analytical datasets that power the Semantic Model, DAX measures, and Power BI executive dashboards.
 
 ---
-
+ 
 ## Architecture Position
 
 ```
